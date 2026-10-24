@@ -1,55 +1,92 @@
-#TO FULLY REMAKE
+import os
+import joblib
+import numpy as np
+from collections import deque, Counter
+from ai.feature_extractor import SignFeatureExtractor
+
 
 class SignTranslator:
     """
-    Reprezintă blocul [CODE FOR SIGN TRANSLATION] din Zona Albastră.
-    Primește DOAR dicționarul `sign_input_template` și returnează textul tradus.
+    Modul de inferență ultra-rapid pentru semne statice și dinamice.
     """
 
-    def __init__(self):
+    def __init__(self, model_path=None, window_size=5, confidence_threshold=0.30):
+        if model_path is None:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            model_path = os.path.join(base_dir, "data", "sign_model.pkl")
+
+        self.model_path = model_path
+        self.model = None
+        self.classes = []
+        self.confidence_threshold = confidence_threshold
+
+        # Fereastră scurtă (5 cadre = ~150ms) pentru reacție instantanee la semne rapide
+        self.frame_window = deque(maxlen=window_size)
+        self.prediction_history = deque(maxlen=2)
         self.last_translated_word = None
+        self.frame_counter = 0
+
+        self.load_model()
+
+    def load_model(self):
+        if os.path.exists(self.model_path):
+            try:
+                bundle = joblib.load(self.model_path)
+                self.model = bundle["model"]
+                # Dezactivăm multiprocessing-ul la inferență (elimină lag-ul masiv pe Windows)
+                if hasattr(self.model, "steps"):
+                    clf = self.model.steps[-1][1]
+                    if hasattr(clf, "n_jobs"):
+                        clf.n_jobs = 1
+                self.classes = list(bundle["classes"])
+                return True
+            except Exception as e:
+                print(f"[WARN] Could not load AI model: {e}")
+        return False
 
     def translate(self, sign_input_template):
-        """
-        Analizează coordonatele din template.
-        Returnează un cuvânt doar atunci când se schimbă semnul (pentru a nu face spam în UI).
-        """
-        if sign_input_template["hands_detected"] == 0:
+        if not sign_input_template or sign_input_template.get("hands_detected", 0) == 0:
+            self.frame_window.clear()
+            self.prediction_history.clear()
             self.last_translated_word = None
             return None
 
-        # Luăm prima mână detectată din template
-        first_hand = sign_input_template["hands"][0]
-        lms = first_hand["landmarks"]
-        hand_type = first_hand["type"]
+        if self.model is None:
+            if not self.load_model():
+                return None
 
-        # Verificăm ce degete sunt ridicate comparând vârful degetului cu articulația de sub el
-        # (În coordonatele imaginii, axa Y crește în jos, deci y_varf < y_baza înseamnă deget ridicat)
-        fingers_up = [
-            lms[8]["y"] < lms[6]["y"],    # Arătător (Index)
-            lms[12]["y"] < lms[10]["y"],  # Mijlociu (Middle)
-            lms[16]["y"] < lms[14]["y"],  # Inelar (Ring)
-            lms[20]["y"] < lms[18]["y"],  # Degetul mic (Pinky)
-        ]
+        frame_feat = SignFeatureExtractor.extract_frame_features(sign_input_template)
+        if frame_feat is None:
+            return None
 
-        count_up = sum(fingers_up)
+        self.frame_window.append(frame_feat)
+        self.frame_counter += 1
 
-        # Reguli demonstrative pe baza datelor din template (până antrenăm modelul AI complet)
-        detected_word = None
-        if count_up == 4:
-            detected_word = f"[SALUT / PALMĂ DESCHISĂ ({hand_type})]"
-        elif count_up == 0:
-            detected_word = f"[STOP / PUMN ({hand_type})]"
-        elif fingers_up == [True, True, False, False]:
-            detected_word = "[VICTORIE / PACE]"
-        elif fingers_up == [True, False, False, False]:
-            detected_word = "[UNU / ATENȚIE]"
-        elif fingers_up == [True, False, False, True]:
-            detected_word = "[ROCK / ILY]"
+        # Rulăm clasificatorul AI din 2 în 2 cadre și imediat ce avem minim 2 cadre
+        if len(self.frame_window) < 2 or (self.frame_counter % 2 != 0):
+            return None
 
-        # Returnăm cuvântul doar dacă e diferit de ultimul semn afișat
-        if detected_word and detected_word != self.last_translated_word:
-            self.last_translated_word = detected_word
-            return detected_word
+        seq_vector = SignFeatureExtractor.extract_sequence_features(list(self.frame_window))
+        if seq_vector is None:
+            return None
+
+        probs = self.model.predict_proba([seq_vector])[0]
+        best_idx = int(np.argmax(probs))
+        best_prob = float(probs[best_idx])
+        predicted_label = self.model.classes_[best_idx]
+
+        if best_prob >= self.confidence_threshold:
+            self.prediction_history.append(predicted_label)
+
+            # Confirmare rapidă din 2 predicții consecutive
+            if len(self.prediction_history) == 2 and (
+                self.prediction_history[0] == self.prediction_history[1]
+            ):
+                if predicted_label != self.last_translated_word:
+                    self.last_translated_word = predicted_label
+                    # Golim jumătate din fereastră ca următorul semn să fie prins imediat
+                    while len(self.frame_window) > 2:
+                        self.frame_window.popleft()
+                    return f"{predicted_label} ({int(best_prob * 100)}%)"
 
         return None
