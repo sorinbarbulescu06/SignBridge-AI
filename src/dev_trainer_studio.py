@@ -25,20 +25,20 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 class BulkDatasetModal(ctk.CTkToplevel):
     """
-    Fereastră user-friendly care scanează un folder de dataset (cu subfoldere sau fișiere directe),
-    afișează toate cuvintele/semnele găsite și îl lasă pe developer să bifeze exact ce vrea să învețe AI-ul.
+    Fereastră modală pentru selecția claselor/cuvintelor dintr-un folder Bulk Dataset.
+    Toate textele vizibile în UI sunt 100% în engleză.
     """
 
     def __init__(self, parent, folder_path, grouped_files, on_confirm_callback):
         super().__init__(parent)
-        self.title("Bulk Dataset Manager - Selectează ce vrei să învețe AI-ul")
+        self.title("Bulk Dataset Manager - Select Classes to Learn")
         self.geometry("720x640")
         self.minsize(620, 520)
         self.transient(parent)
         self.grab_set()
 
         self.folder_path = folder_path
-        self.grouped_files = grouped_files  # { "SALUT": [path1, path2, ...], ... }
+        self.grouped_files = grouped_files  # { "HELLO": [path1, path2, ...], ... }
         self.on_confirm_callback = on_confirm_callback
         self.checkbox_vars = {}
         self.checkbox_widgets = {}
@@ -49,31 +49,31 @@ class BulkDatasetModal(ctk.CTkToplevel):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(3, weight=1)
 
-        # Titlu și cale
+        # Header
         header = ctk.CTkFrame(self, fg_color="transparent")
         header.grid(row=0, column=0, padx=20, pady=(15, 5), sticky="ew")
 
         ctk.CTkLabel(
             header,
-            text=f"📦 Dataset găsit: {len(self.grouped_files)} cuvinte / categorii detectate",
+            text=f"📦 Dataset Scanned: {len(self.grouped_files)} words / categories detected",
             font=ctk.CTkFont(size=17, weight="bold"),
         ).pack(anchor="w")
 
         ctk.CTkLabel(
             header,
-            text=f"Sursă: {self.folder_path}",
+            text=f"Source: {self.folder_path}",
             font=ctk.CTkFont(size=12),
             text_color="#999999",
         ).pack(anchor="w")
 
-        # Bara de căutare și selecție rapidă
+        # Search & Quick Select Toolbar
         toolbar = ctk.CTkFrame(self, corner_radius=10)
         toolbar.grid(row=1, column=0, padx=20, pady=8, sticky="ew")
         toolbar.grid_columnconfigure(0, weight=1)
 
         self.search_entry = ctk.CTkEntry(
             toolbar,
-            placeholder_text="🔍 Caută un cuvânt sau o literă (ex: SALUT, A, WATER)...",
+            placeholder_text="🔍 Search word or letter (e.g., HELLO, A, WATER)...",
             height=34,
         )
         self.search_entry.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
@@ -93,27 +93,27 @@ class BulkDatasetModal(ctk.CTkToplevel):
             command=self.deselect_all,
         ).grid(row=0, column=2, padx=(5, 10), pady=10)
 
-        # Opțiune de limitare a numărului de fișiere per cuvânt (pentru viteză)
+        # Limită de fișiere procesate per cuvânt pentru viteză
         limit_frame = ctk.CTkFrame(self, fg_color="transparent")
         limit_frame.grid(row=2, column=0, padx=20, pady=(0, 5), sticky="ew")
 
         ctk.CTkLabel(
             limit_frame,
-            text="Maxim fișiere procesate per cuvânt (pentru import rapid):",
+            text="Max files processed per class (for fast import):",
             font=ctk.CTkFont(size=13),
         ).pack(side="left", padx=(0, 10))
 
         self.max_files_menu = ctk.CTkOptionMenu(
             limit_frame,
-            values=["10 fișiere / cuvânt", "25 fișiere / cuvânt", "50 fișiere / cuvânt", "Toate fișierele"],
+            values=["10 files / class", "25 files / class", "50 files / class", "All files"],
             width=170,
         )
-        self.max_files_menu.set("25 fișiere / cuvânt")
+        self.max_files_menu.set("25 files / class")
         self.max_files_menu.pack(side="left")
 
-        # Lista scrollabilă cu Checkboxes pentru fiecare cuvânt/fișier
+        # Lista scrollabilă cu Checkboxes
         self.scroll_frame = ctk.CTkScrollableFrame(
-            self, label_text="Bifează cuvintele/fișierele pe care vrei să le adaugi (Append) în Dataset:"
+            self, label_text="Select the words/files you want to append to the Dataset:"
         )
         self.scroll_frame.grid(row=3, column=0, padx=20, pady=8, sticky="nsew")
         self.scroll_frame.grid_columnconfigure(0, weight=1)
@@ -126,9 +126,9 @@ class BulkDatasetModal(ctk.CTkToplevel):
             imgs = sum(1 for p in paths if os.path.splitext(p)[1].lower() in IMAGE_EXTS)
             details = []
             if vids:
-                details.append(f"{vids} video")
+                details.append(f"{vids} videos")
             if imgs:
-                details.append(f"{imgs} imagini")
+                details.append(f"{imgs} images")
             info_str = ", ".join(details)
 
             cb = ctk.CTkCheckBox(
@@ -140,7 +140,7 @@ class BulkDatasetModal(ctk.CTkToplevel):
             cb.grid(row=idx, column=0, padx=10, pady=5, sticky="w")
             self.checkbox_widgets[label] = cb
 
-        # Butoanele de acțiune jos
+        # Footer Actions
         footer = ctk.CTkFrame(self, fg_color="transparent")
         footer.grid(row=4, column=0, padx=20, pady=15, sticky="ew")
         footer.grid_columnconfigure(0, weight=1)
@@ -202,9 +202,8 @@ class BulkDatasetModal(ctk.CTkToplevel):
 
 class DevTrainerStudio(ctk.CTk):
     """
-    Unealtă exclusivă pentru Developer (separată de aplicația finală).
-    Toate metodele de învățare (Live, Single/Multi File și Bulk Folder) fac APPEND
-    la baza de date existentă (`signs_dataset.json`), fără să șteargă ce a învățat anterior.
+    Unealtă exclusivă pentru Developer.
+    Toate butoanele și textele vizibile în UI sunt 100% în engleză.
     """
 
     def __init__(self):
@@ -254,10 +253,7 @@ class DevTrainerStudio(ctk.CTk):
 
     @staticmethod
     def _clean_label_from_filename(filepath):
-        """
-        Extrage numele cuvântului din numele fișierului:
-        'salut.mp4' -> 'SALUT', 'libelula_2.mp4' -> 'LIBELULA'
-        """
+        """Extrage numele cuvântului din numele fișierului."""
         base = os.path.splitext(os.path.basename(filepath))[0]
         cleaned = re.sub(r"[\s_\-]*(\(\d+\)|\d+)$", "", base).strip()
         return cleaned.upper() if cleaned else base.upper()
@@ -268,7 +264,7 @@ class DevTrainerStudio(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
 
         # ==========================================
-        # STÂNGA: CAMERĂ & ÎNREGISTRARE LIVE MANUALĂ
+        # LEFT PANEL: LIVE CAMERA & MANUAL LABELING
         # ==========================================
         left_panel = ctk.CTkFrame(self, corner_radius=15)
         left_panel.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
@@ -325,7 +321,7 @@ class DevTrainerStudio(ctk.CTk):
 
         self.entry_label = ctk.CTkEntry(
             rec_frame,
-            placeholder_text="Ce cuvânt/semn ai arătat? (ex: SALUT, UNT, A)",
+            placeholder_text="Enter sign/word label (e.g., HELLO, BUTTER, A)",
             height=38,
         )
         self.entry_label.grid(row=0, column=1, padx=8, pady=12, sticky="ew")
@@ -343,7 +339,7 @@ class DevTrainerStudio(ctk.CTk):
         self.btn_save_live.grid(row=0, column=2, padx=12, pady=12)
 
         # ==========================================
-        # DREAPTA: BULK DATASET & FILE INGESTION (APPEND)
+        # RIGHT PANEL: BULK DATASET & FILE INGESTION
         # ==========================================
         right_panel = ctk.CTkFrame(self, corner_radius=15)
         right_panel.grid(row=0, column=1, padx=(0, 20), pady=20, sticky="nsew")
@@ -358,7 +354,7 @@ class DevTrainerStudio(ctk.CTk):
 
         ctk.CTkLabel(
             right_panel,
-            text="Adaugă semne noi peste ce știe deja din fișiere individuale\nsau din foldere întregi cu dataset-uri (Video & Imagini).",
+            text="Append new signs to the existing dataset from individual files\nor full dataset folders (Videos & Images).",
             font=ctk.CTkFont(size=12),
             text_color="#aaaaaa",
         ).grid(row=1, column=0, padx=20, pady=2)
@@ -367,7 +363,6 @@ class DevTrainerStudio(ctk.CTk):
         ingest_btns.grid(row=2, column=0, padx=20, pady=8, sticky="ew")
         ingest_btns.grid_columnconfigure(0, weight=1)
 
-        # Butonul nou de BULK READ cu selector user-friendly
         self.btn_bulk_folder = ctk.CTkButton(
             ingest_btns,
             text="📦 Open Bulk Dataset Folder (Select & Learn)",
@@ -379,7 +374,6 @@ class DevTrainerStudio(ctk.CTk):
         )
         self.btn_bulk_folder.grid(row=0, column=0, pady=(0, 6), sticky="ew")
 
-        # Butonul de selecție directă de fișiere (cu posibilitate de label manual sau auto)
         self.btn_upload_files = ctk.CTkButton(
             ingest_btns,
             text="📁 Select Specific Files (Video / Images)",
@@ -389,16 +383,13 @@ class DevTrainerStudio(ctk.CTk):
         )
         self.btn_upload_files.grid(row=1, column=0, sticky="ew")
 
-        # Bară de progres pentru importurile Bulk
         self.progress_bar = ctk.CTkProgressBar(right_panel, height=10)
         self.progress_bar.grid(row=3, column=0, padx=20, pady=(2, 4), sticky="ew")
         self.progress_bar.set(0)
 
-        # Jurnal și Statistici Dataset
         self.log_box = ctk.CTkTextbox(right_panel, font=ctk.CTkFont(size=13), wrap="word")
         self.log_box.grid(row=4, column=0, padx=20, pady=8, sticky="nsew")
 
-        # Management per cuvânt + Butonul de Train
         bottom_bar = ctk.CTkFrame(right_panel, fg_color="transparent")
         bottom_bar.grid(row=5, column=0, padx=20, pady=(5, 15), sticky="ew")
         bottom_bar.grid_columnconfigure(0, weight=1)
@@ -414,19 +405,18 @@ class DevTrainerStudio(ctk.CTk):
         )
         self.btn_train.grid(row=0, column=0, columnspan=2, pady=(0, 8), sticky="ew")
 
-        # Ștergere individuală a unei singure etichete (fără a pierde restul bazei de date)
         del_row = ctk.CTkFrame(bottom_bar, fg_color="transparent")
         del_row.grid(row=1, column=0, columnspan=2, sticky="ew")
         del_row.grid_columnconfigure(0, weight=1)
 
         self.delete_label_menu = ctk.CTkOptionMenu(
-            del_row, values=["(Niciun cuvânt)"], height=30
+            del_row, values=["(No labels)"], height=30
         )
         self.delete_label_menu.grid(row=0, column=0, padx=(0, 6), sticky="ew")
 
         self.btn_delete_one = ctk.CTkButton(
             del_row,
-            text="Șterge Cuvântul Selectat",
+            text="Delete Selected Label",
             fg_color="#7f1d1d",
             hover_color="#991b1b",
             height=30,
@@ -453,29 +443,23 @@ class DevTrainerStudio(ctk.CTk):
             self.delete_label_menu.configure(values=sorted_labels)
             self.delete_label_menu.set(sorted_labels[0])
         else:
-            self.delete_label_menu.configure(values=["(Niciun cuvânt)"])
-            self.delete_label_menu.set("(Niciun cuvânt)")
+            self.delete_label_menu.configure(values=["(No labels)"])
+            self.delete_label_menu.set("(No labels)")
 
         self.log("=== DATASET SUMMARY (APPEND MODE) ===")
-        self.log(f"Total secvențe în baza de date: {len(samples)}")
-        self.log(f"Cuvinte / Litere învățate: {len(counts)}\n")
+        self.log(f"Total sequences in database: {len(samples)}")
+        self.log(f"Learned Words / Letters: {len(counts)}\n")
         for lbl in sorted_labels:
-            self.log(f"  • {lbl}: {counts[lbl]} vectori")
+            self.log(f"  • {lbl}: {counts[lbl]} vectors")
         self.log("=====================================\n")
 
     # ==========================================
     # PROCESATOR UNITAR PENTRU VIDEO ȘI IMAGINI
     # ==========================================
     def _ingest_single_media_file(self, filepath, label):
-        """
-        Extrage coordonatele mâinii dintr-un fișier video (.mp4/.avi) sau dintr-o imagine (.jpg/.png)
-        și îi dă APPEND în `self.dataset["samples"]` sub eticheta `label`.
-        Returnează numărul de vectori adăugați.
-        """
         ext = os.path.splitext(filepath)[1].lower()
         added = 0
 
-        # CAZUL 1: Fișier Imagine (.jpg, .png) - util pentru dataset-uri Kaggle cu litere/semne
         if ext in IMAGE_EXTS:
             frame = cv2.imread(filepath)
             if frame is None:
@@ -485,7 +469,6 @@ class DevTrainerStudio(ctk.CTk):
             if feat is None:
                 return 0
 
-            # Simulăm o secvență statică stabilă din acea imagine + augmentări
             static_seq = [feat for _ in range(6)]
             for vec in SignFeatureExtractor.augment_sequence(static_seq, num_augmentations=6):
                 self.dataset["samples"].append({
@@ -495,7 +478,6 @@ class DevTrainerStudio(ctk.CTk):
                 added += 1
             return added
 
-        # CAZUL 2: Fișier Video (.mp4, .avi, .mov)
         if ext in VIDEO_EXTS:
             cap = cv2.VideoCapture(filepath)
             frames_feats = []
@@ -512,7 +494,6 @@ class DevTrainerStudio(ctk.CTk):
             if len(frames_feats) < 2:
                 return 0
 
-            # Întregul clip + variații
             for vec in SignFeatureExtractor.augment_sequence(frames_feats, num_augmentations=8):
                 self.dataset["samples"].append({
                     "label": label,
@@ -520,7 +501,6 @@ class DevTrainerStudio(ctk.CTk):
                 })
                 added += 1
 
-            # Ferestre scurte glisante pentru recunoaștere rapidă
             win_size = min(8, len(frames_feats))
             step = max(2, win_size // 2)
             for start_i in range(0, max(1, len(frames_feats) - win_size + 1), step):
@@ -540,12 +520,12 @@ class DevTrainerStudio(ctk.CTk):
     # ==========================================
     def open_bulk_dataset_wizard(self):
         folder_path = filedialog.askdirectory(
-            title="Selectează Folderul cu Dataset-ul (poate conține subfoldere sau fișiere directe)"
+            title="Select Dataset Folder (can contain subfolders or direct media files)"
         )
         if not folder_path:
             return
 
-        self.log(f"[SCAN] Scanez folderul '{os.path.basename(folder_path)}'...")
+        self.log(f"[SCAN] Scanning folder '{os.path.basename(folder_path)}'...")
         grouped_files = {}
         norm_root = os.path.normpath(folder_path)
 
@@ -556,8 +536,6 @@ class DevTrainerStudio(ctk.CTk):
                     continue
 
                 full_path = os.path.join(current_root, file)
-                # Dacă fișierul se află într-un subfolder (ex: dataset/SALUT/001.mp4),
-                # luăm numele subfolderului ca etichetă. Dacă e direct în rădăcină, luăm numele fișierului.
                 if os.path.normpath(current_root) != norm_root:
                     label = os.path.basename(current_root).strip().upper()
                 else:
@@ -566,10 +544,9 @@ class DevTrainerStudio(ctk.CTk):
                 grouped_files.setdefault(label, []).append(full_path)
 
         if not grouped_files:
-            self.log("[!] Nu s-au găsit fișiere video sau imagini în folderul selectat.")
+            self.log("[!] No video or image files found in the selected folder.")
             return
 
-        # Deschidem fereastra prietenoasă unde alegi exact ce cuvinte vrei să învețe
         BulkDatasetModal(
             self,
             folder_path=folder_path,
@@ -583,13 +560,12 @@ class DevTrainerStudio(ctk.CTk):
             return
 
         self.log(
-            f"[BULK LEARN] Încep procesarea a {len(selected_map)} cuvinte ({total_files} fișiere)..."
+            f"[BULK LEARN] Processing {len(selected_map)} classes ({total_files} files)..."
         )
         self.progress_bar.set(0)
 
         processed = 0
         added_vectors = 0
-        learned_words = []
 
         for label, file_list in selected_map.items():
             word_vectors = 0
@@ -602,17 +578,16 @@ class DevTrainerStudio(ctk.CTk):
                 self.update_idletasks()
 
             if word_vectors > 0:
-                learned_words.append(f"{label} (+{word_vectors})")
-                self.log(f"  ✓ '{label}': adăugați {word_vectors} vectori în dataset.")
+                self.log(f"  ✓ '{label}': added {word_vectors} vectors to dataset.")
             else:
-                self.log(f"  ⚠ '{label}': nu s-au detectat mâini clare în fișiere.")
+                self.log(f"  ⚠ '{label}': no clear hands detected in files.")
 
         self._save_dataset()
         self.progress_bar.set(1.0)
         self._refresh_stats()
         self.log(
-            f"[BULK COMPLET] S-au adăugat (Append) {added_vectors} vectori noi! "
-            f"Apasă '⚡ TRAIN & EXPORT AI MODEL' pentru a actualiza creierul AI."
+            f"[BULK COMPLETE] Appended {added_vectors} new vectors! "
+            f"Click '⚡ TRAIN & EXPORT AI MODEL' to update the AI brain."
         )
 
     # ==========================================
@@ -620,7 +595,7 @@ class DevTrainerStudio(ctk.CTk):
     # ==========================================
     def import_selected_files(self):
         file_paths = filedialog.askopenfilenames(
-            title="Selectează Fișiere Video sau Imagini pentru Învățare",
+            title="Select Video or Image Files to Learn",
             filetypes=[
                 ("Media Files", "*.mp4 *.avi *.mov *.mkv *.webm *.jpg *.jpeg *.png"),
                 ("Video Files", "*.mp4 *.avi *.mov *.mkv *.webm"),
@@ -630,8 +605,6 @@ class DevTrainerStudio(ctk.CTk):
         if not file_paths:
             return
 
-        # Dacă utilizatorul a scris manual un cuvânt în căsuța de jos, îl întrebăm
-        # sau folosim automat numele fiecărui fișier
         manual_override = self.entry_label.get().strip().upper()
 
         total = len(file_paths)
@@ -641,13 +614,13 @@ class DevTrainerStudio(ctk.CTk):
         for idx, path in enumerate(file_paths, start=1):
             label = manual_override if manual_override else self._clean_label_from_filename(path)
             filename = os.path.basename(path)
-            self.log(f"[{idx}/{total}] Procesez '{filename}' -> Cuvânt: '{label}'...")
+            self.log(f"[{idx}/{total}] Processing '{filename}' -> Label: '{label}'...")
 
             cnt = self._ingest_single_media_file(path, label)
             if cnt > 0:
                 added_total += cnt
             else:
-                self.log(f"  [!] În '{filename}' nu s-a detectat nicio mână.")
+                self.log(f"  [!] No hand detected in '{filename}'.")
 
             self.progress_bar.set(idx / total)
             self.update_idletasks()
@@ -655,7 +628,7 @@ class DevTrainerStudio(ctk.CTk):
         self._save_dataset()
         self._refresh_stats()
         self.log(
-            f"[APPEND COMPLET] S-au adăugat {added_total} vectori noi peste baza de date existentă!"
+            f"[APPEND COMPLETE] Added {added_total} new vectors to the existing dataset!"
         )
 
     # ==========================================
@@ -719,7 +692,7 @@ class DevTrainerStudio(ctk.CTk):
 
     def toggle_recording(self):
         if not self.camera_running:
-            self.log("[!] Pornește camera înainte să înregistrezi un semn!")
+            self.log("[!] Please open the camera before recording a gesture!")
             return
 
         if not self.is_recording:
@@ -727,27 +700,27 @@ class DevTrainerStudio(ctk.CTk):
             self.is_recording = True
             self.btn_record.configure(text="■ Stop Recording", fg_color="#d97706")
             self.btn_save_live.configure(state="disabled")
-            self.log("[REC] Execută semnul acum în fața camerei...")
+            self.log("[REC] Perform the sign in front of the camera now...")
         else:
             self.is_recording = False
             self.btn_record.configure(text="● Start Recording Gesture", fg_color="#c93b2b")
             if len(self.recorded_Buffer) >= 2:
                 self.btn_save_live.configure(state="normal")
                 self.log(
-                    f"[OK] S-au capturat {len(self.recorded_Buffer)} cadre. "
-                    f"Scrie în căsuță ce cuvânt a fost și apasă 'Append Label'!"
+                    f"[OK] Captured {len(self.recorded_Buffer)} frames. "
+                    f"Type the label in the box and click 'Append Label'!"
                 )
             else:
-                self.log("[EROARE] Nu s-a detectat mâna în timpul înregistrării.")
+                self.log("[ERROR] No hand was detected during recording.")
 
     def save_recorded_gesture(self):
         label = self.entry_label.get().strip().upper()
         if not label:
-            self.log("[!] Scrie numele cuvântului/literei în căsuță înainte de salvare!")
+            self.log("[!] Please enter a word/letter label before saving!")
             return
 
         if len(self.recorded_Buffer) < 2:
-            self.log("[!] Nu există o înregistrare validă în memorie.")
+            self.log("[!] No valid recording in memory.")
             return
 
         aug_vectors = SignFeatureExtractor.augment_sequence(self.recorded_Buffer, num_augmentations=8)
@@ -771,7 +744,7 @@ class DevTrainerStudio(ctk.CTk):
         self.btn_save_live.configure(state="disabled")
         self.entry_label.delete(0, "end")
         self._refresh_stats()
-        self.log(f"[APPEND] Semnul '{label}' a fost adăugat în baza de date!")
+        self.log(f"[APPEND] Sign '{label}' has been added to the dataset!")
 
     # ==========================================
     # ANTRENARE & MANAGEMENT SELECTIV
@@ -779,7 +752,7 @@ class DevTrainerStudio(ctk.CTk):
     def train_and_export_model(self):
         samples = self.dataset.get("samples", [])
         if len(samples) < 5:
-            self.log("[EROARE] Adaugă cel puțin 2 semne/cuvinte diferite înainte de antrenare!")
+            self.log("[ERROR] Add at least 2 different signs/words before training!")
             return
 
         X = np.array([s["features"] for s in samples], dtype=np.float32)
@@ -788,12 +761,12 @@ class DevTrainerStudio(ctk.CTk):
         unique_classes = np.unique(y)
         if len(unique_classes) < 2:
             self.log(
-                f"[EROARE] Ai doar cuvântul '{unique_classes[0]}' în baza de date. "
-                f"Adaugă cel puțin încă un cuvânt diferit!"
+                f"[ERROR] Only label '{unique_classes[0]}' exists in the database. "
+                f"Please add at least one more different label!"
             )
             return
 
-        self.log(f"[AI] Antrenez modelul rapid pe {len(unique_classes)} cuvinte ({len(samples)} vectori)...")
+        self.log(f"[AI] Training fast model on {len(unique_classes)} classes ({len(samples)} vectors)...")
 
         model = make_pipeline(
             StandardScaler(),
@@ -813,12 +786,12 @@ class DevTrainerStudio(ctk.CTk):
             "classes": unique_classes.tolist(),
         }
         joblib.dump(bundle, self.model_path)
-        self.log(f"[SUCCES] Modelul AI actualizat a fost salvat în:\n{self.model_path}")
-        self.log(f"Total cuvinte active în aplicație ({len(unique_classes)}): {', '.join(unique_classes)}")
+        self.log(f"[SUCCESS] Updated AI model saved to:\n{self.model_path}")
+        self.log(f"Total active words in application ({len(unique_classes)}): {', '.join(unique_classes)}")
 
     def delete_single_label(self):
         target = self.delete_label_menu.get()
-        if not target or target == "(Niciun cuvânt)":
+        if not target or target == "(No labels)":
             return
 
         before_count = len(self.dataset.get("samples", []))
@@ -831,8 +804,8 @@ class DevTrainerStudio(ctk.CTk):
         self._save_dataset()
         self._refresh_stats()
         self.log(
-            f"[ȘTERS] Cuvântul '{target}' ({removed} vectori) a fost eliminat. "
-            f"Restul bazei de date a rămas intact!"
+            f"[DELETED] Label '{target}' ({removed} vectors) was removed. "
+            f"The rest of the dataset remains intact!"
         )
 
     def on_closing(self):
