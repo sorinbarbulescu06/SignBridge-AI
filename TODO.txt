@@ -1,0 +1,1 @@
+remake sign_translator.py

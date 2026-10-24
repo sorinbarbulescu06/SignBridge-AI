@@ -1,6 +1,7 @@
 import customtkinter as ctk
 from tkinter import filedialog, Canvas
 
+from translation.sign_translator import SignTranslator
 from hardware.device_scanner import DeviceScanner
 from hardware.video_engine import VideoEngine
 from hardware.audio_engine import AudioEngine
@@ -26,6 +27,7 @@ class SignLanguageApp(ctk.CTk):
         self.empty_image = create_empty_image()
 
         # Motoare Hardware decuplate (SoC)
+        self.sign_translator = SignTranslator()
         self.video_engine = VideoEngine()
         self.audio_engine = AudioEngine()
 
@@ -366,16 +368,23 @@ class SignLanguageApp(ctk.CTk):
         if not self.video_engine.is_running:
             return
 
-        ret, img_pil = self.video_engine.get_frame()
+        ret, img_pil, sign_template = self.video_engine.get_frame()
         if ret and img_pil is not None:
             ctk_img = fit_image_to_container(img_pil, self.video_container)
             self.video_display.configure(image=ctk_img, text="")
             self.video_display.image = ctk_img
+            # Trimitem template-ul generic către Zona Albastră (SignTranslator)
+            if sign_template is not None:
+                translated_word = self.sign_translator.translate(sign_template)
+                if translated_word:
+                    self.text_output.insert("end", f"{translated_word}\n")
+                    self.text_output.see("end")  # Auto-scroll jos
             self.video_loop_id = self.after(30, self.update_video_frame)
         else:
             self.stop_camera_feed()
             self.clear_video_display("[ Video Finished ]")
             self.btn_camera.configure(text="Open Camera", fg_color=["#3B8ED0", "#1F6AA5"])
+
 
     def stop_camera_feed(self):
         if self.video_loop_id is not None:

@@ -1,5 +1,6 @@
 import cv2
 from PIL import Image
+from ai.hand_tracker import HandTracker
 
 
 class VideoEngine:
@@ -9,6 +10,7 @@ class VideoEngine:
         self.cap = None
         self.is_running = False
         self.is_live = False
+        self.hand_tracker = HandTracker()
 
     def start(self, source, is_live=True):
         self.stop()
@@ -30,20 +32,23 @@ class VideoEngine:
         return True
 
     def get_frame(self):
-        """Returnează un tuplu (succes, imagine_PIL)."""
+        """Returnează (succes, imagine_PIL_cu_schelet, sign_input_template)."""
         if not self.is_running or self.cap is None:
-            return False, None
+            return False, None, None
 
         ret, frame = self.cap.read()
         if not ret:
-            return False, None
+            return False, None, None
 
         if self.is_live:
             frame = cv2.flip(frame, 1)
 
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # Trimitem cadrul prin AI pentru desenarea scheletului și extragerea template-ului
+        frame_annotated, sign_template = self.hand_tracker.process_frame(frame)
+
+        frame_rgb = cv2.cvtColor(frame_annotated, cv2.COLOR_BGR2RGB)
         img_pil = Image.fromarray(frame_rgb)
-        return True, img_pil
+        return True, img_pil, sign_template
 
     def stop(self):
         self.is_running = False
