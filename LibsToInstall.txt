@@ -1,4 +1,0 @@
-pip install opencv-python pillow sounddevice numpy
-pip install customtkinter
-pip install mediapipe
-pip install scikit-learn joblib

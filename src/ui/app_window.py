@@ -2,6 +2,7 @@ import customtkinter as ctk
 from tkinter import filedialog, Canvas
 
 from translation.sign_translator import SignTranslator
+from ai.voice_recognizer import VoiceRecognizer
 from hardware.device_scanner import DeviceScanner
 from hardware.video_engine import VideoEngine
 from hardware.audio_engine import AudioEngine
@@ -28,12 +29,14 @@ class SignLanguageApp(ctk.CTk):
 
         # Motoare Hardware decuplate (SoC)
         self.sign_translator = SignTranslator()
+        self.voice_recognizer = VoiceRecognizer()
         self.video_engine = VideoEngine()
         self.audio_engine = AudioEngine()
 
         self.video_loop_id = None
         self.wave_loop_id = None
         self.wave_phase = 0.0
+        self.recognized_words_history = []
 
         # Scanăm dispozitivele prin modulul dedicat
         self.camera_devices, self.mic_devices, self.speaker_devices = DeviceScanner.scan_all()
@@ -271,7 +274,9 @@ class SignLanguageApp(ctk.CTk):
             text="[ Viewport Model 3D ]\n\nAspect-Ratio Locked Ready",
             image=self.empty_image,
             fg_color="transparent",
-            font=ctk.CTkFont(size=14),
+            font=ctk.CTkFont(size=18, weight="bold"),
+            wraplength=380,
+            justify="center",
         )
         self.model_3d_display.grid(row=0, column=0, sticky="nsew")
 
@@ -310,6 +315,7 @@ class SignLanguageApp(ctk.CTk):
         self.audio_status_overlay.place(relx=0.5, rely=0.5, anchor="center")
         self.btn_mic.configure(text="Use Microphone", fg_color="#c93b2b")
 
+        self.recognized_words_history.clear()
         self.recognized_voice_label.configure(text="No Word Detected")
         self.clear_3d_display("[ Viewport Model 3D ]\n\n")
 
@@ -385,7 +391,6 @@ class SignLanguageApp(ctk.CTk):
             self.clear_video_display("[ Video Finished ]")
             self.btn_camera.configure(text="Open Camera", fg_color=["#3B8ED0", "#1F6AA5"])
 
-
     def stop_camera_feed(self):
         if self.video_loop_id is not None:
             self.after_cancel(self.video_loop_id)
@@ -425,6 +430,28 @@ class SignLanguageApp(ctk.CTk):
             self.audio_status_overlay.configure(text=f"Mic Error:\n{e}")
             self.audio_status_overlay.place(relx=0.5, rely=0.5, anchor="center")
 
+    def _poll_speech_to_text(self):
+            """Preia propozițiile complete și le adaugă fluent în paragraf."""
+            phrase = self.audio_engine.get_completed_phrase()
+            if phrase is not None:
+                pcm_bytes, sr_rate = phrase
+                self.recognized_voice_label.configure(text="Translating speech...")
+                self.voice_recognizer.transcribe_pcm_async(pcm_bytes, sr_rate)
+
+            recognized_text = self.voice_recognizer.get_recognized_text()
+            if recognized_text is not None:
+                # Adăugăm propoziția întreagă recunoscută în istoric
+                self.recognized_words_history.append(recognized_text)
+
+                # Unim toate propozițiile într-un paragraf continuu
+                full_paragraph = "\n\n".join(self.recognized_words_history[-6:])
+
+                self.model_3d_display.configure(
+                    image=self.empty_image,
+                    text=full_paragraph,
+                )
+                self.recognized_voice_label.configure(text="Ready / Listening...")
+
     def animate_waveform(self):
         if not self.audio_engine.is_running:
             return
@@ -439,6 +466,9 @@ class SignLanguageApp(ctk.CTk):
 
         if len(points) >= 4:
             self.wave_canvas.create_line(points, fill=color, width=line_width, smooth=True)
+
+        # Verificăm în paralel și recunoașterea vocală
+        self._poll_speech_to_text()
 
         self.wave_loop_id = self.after(30, self.animate_waveform)
 
@@ -461,7 +491,14 @@ class SignLanguageApp(ctk.CTk):
             nume_fisier = file_path.split("/")[-1]
             self.audio_status_overlay.configure(text=f"Audio File Loaded:\n{nume_fisier}")
             self.audio_status_overlay.place(relx=0.5, rely=0.5, anchor="center")
-            self.recognized_voice_label.configure(text=f"Ready to process: {nume_fisier}")
+            self.recognized_voice_label.configure(text=f"Transcribing: {nume_fisier}...")
+            self.voice_recognizer.transcribe_file_async(file_path)
+            self._wait_for_file_transcription()
+
+    def _wait_for_file_transcription(self):
+        self._poll_speech_to_text()
+        if "Transcribing:" in self.recognized_voice_label.cget("text"):
+            self.after(100, self._wait_for_file_transcription)
 
     def on_closing(self):
         self.reset_all_states()
