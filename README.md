@@ -4,7 +4,7 @@ A modular, scalable, and high-performance AI-powered bidirectional sign language
 
 ## Project Overview
 
-<img src="assets/demo.gif" alt="Learning Bird" width="600">
+<img src="assets/Demo.gif" alt="Learning Bird" width="600">
 
 This project is designed as an accessible communication solution bridging the gap between sign language users and verbal communicators. The architecture strictly separates the client-facing application, optimized for low-latency real-time inference, from a dedicated developer studio used for data ingestion and model training.
 
