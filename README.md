@@ -1,7 +1,7 @@
 # AI Sign Language Bidirectional Translator
 
 A modular, scalable, and high-performance AI-powered bidirectional sign language translation system supporting Sign to Voice and Voice to Sign operations, developed in Python.
-You can test the application live here: [Sign Language Translator - Web App](https://linkul-tau.onrender.com)
+You can test the application live here: [Sign Language Translator - Web App]([https://linkul-tau.onrender.com](https://signbridge-ai-2-082g.onrender.com))
 
 > ** Cold Start Notice:** The live demo is hosted on a free-tier Render instance. If it hasn't been accessed recently, the server enters sleep mode to conserve resources. Please allow **60-80 seconds** for the container to wake up and load on your first click.
 
